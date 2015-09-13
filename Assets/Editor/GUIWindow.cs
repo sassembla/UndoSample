@@ -6,84 +6,89 @@ using System.Linq;
 using System.Collections.Generic;
 
 public class GUIWindow : EditorWindow {
-
-	[MenuItem("Window/Test")]
+	[MenuItem("Window/UndoTest")]
 	static void ShowEditor() {
 		EditorWindow.GetWindow<GUIWindow>();
 	}
 
+	private Recorder record;
+	private int recordId;
 
-	List<Content> contents;
-	private bool repaint;
-
-
+	private Dictionary<int, string> idCacheDict = new Dictionary<int, string>();
+	
 	private void OnEnable () {
-		Debug.Log("window opened.");
+		Debug.LogError("onEnable");
 
 		// handler for Undo/Redo
 		Undo.undoRedoPerformed += () => {
-			ApplyChanges();
-		};
-
-		// handler for updated by Inspector.
-		Undo.willFlushUndoRecord += () => {
-			ApplyChanges();
-		};
-
-		CreateContents();
-	}
-
-
-	/**
-		apply changes from RecordObjects to Contents.
-	*/
-	private void ApplyChanges () {
-		repaint = false;
-		foreach (var content in contents) {
-			var shouldUpdate = content.ApplyRecordDataThenShouldUpdate();
-			if (shouldUpdate) repaint = true;
-		}
-	}
-
-	private void CreateContents () {
-		contents = new List<Content>();
-		contents.Add(new Content());
-	}
-
-	int counter = 0;
-	private void Update () {
-		if (counter % 1000 == 0) {
-			foreach (var content in contents) {
-				Debug.Log("content recordObjId:" + content.recordObjId + " contentData:" + content.contentData + " IsValid:" + content.IsValid());
+			// restore content id from idCacheDict.
+			if (idCacheDict.ContainsKey(record.contents.Count)) {
+				record.contents[record.contents.Count - 1].SetId(idCacheDict[record.contents.Count]);
 			}
-		}
 
-		counter++;
+			record.ApplyDataToInspector();
+
+			Repaint();
+		};
+
+		var savedData = "raw data";// 抽出した結果を保存しておく。それを引き出す。
+
+		RestoreRecord();
 	}
 
 	private void OnGUI () {
-		if (GUILayout.Button("add new content-record pair")) {
-			contents.Add(new Content());
+		if (record == null) {
+			Debug.LogError("regenerate.");
+			var candidate = EditorUtility.InstanceIDToObject(recordId) as Recorder;
+
+			if (candidate == null) RestoreRecord();
+			else record = candidate;
+		}
+
+
+		if (GUILayout.Button("add content:" + record.contents.Count)) {
+			
+			var newContent = new ContentLine(Guid.NewGuid().ToString());
+
+			Undo.RecordObject(record, "add");
+			record.contents.Add(newContent);
+
+			// store data to idCacheDict.
+			idCacheDict[record.contents.Count] = newContent.GetId();
 		}
 
 		EditorGUILayout.Space();
 
-		foreach (var content in contents) {
-			if (!content.IsValid()) continue;
+		for (var i = 0; i < record.contents.Count; i++) {
+			if (record.contents[i].IsDeleted()) continue;
 
-			using (new EditorGUILayout.HorizontalScope()) {
-				if (GUILayout.Button("show content recordObjId:" + content.recordObjId)) {
-					content.SetActive();
-				}
+			EditorGUILayout.BeginHorizontal();
+			
+			if (GUILayout.Button("SetActive")) record.contents[i].SetActive();
 
-				if (GUILayout.Button("update count." + " current:" + content.contentData)) {
-					content.CountUp();
-				}
+			if (GUILayout.Button("count up content[" + i + "]:" + record.contents[i].GetData() + " not effect:" + record.contents[i].GetUnchangeData() + " id:" + record.contents[i].GetId())) {
+				Undo.RecordObject(record, "update content index:" + i);
+				record.contents[i].CountUp();
 			}
 
-			EditorGUILayout.Space();
+			if (GUILayout.Button("delete " + i)) {
+				Undo.RecordObject(record, "delete:" + i);
+				record.contents[i].Delete();
+			}
+			
+			EditorGUILayout.EndHorizontal();
+		}
+	}
+
+	private void RestoreRecord () {
+		if (record == null) {
+			record = ScriptableObject.CreateInstance("Recorder") as Recorder;
+			recordId = record.GetInstanceID();
 		}
 
-		if (repaint) HandleUtility.Repaint();
+		/*
+			保存されているデータを読み出して使用する。
+		*/
+		record.ApplySavedData();
 	}
 }
