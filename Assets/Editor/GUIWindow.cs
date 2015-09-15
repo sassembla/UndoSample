@@ -11,16 +11,19 @@ public class GUIWindow : EditorWindow {
 		EditorWindow.GetWindow<GUIWindow>();
 	}
 
+	[SerializeField] public List<ContentLine> contents;
+
+	// cache dictionary for Undo/Redo generated object.
 	private Dictionary<int, string> idCacheDict = new Dictionary<int, string>();
 	
 	private void OnEnable () {
-		Debug.LogError("onEnable");
+		Debug.Log("onEnable");
 
 		// handler for Undo/Redo
 		Undo.undoRedoPerformed += () => {
 			// restore content id from idCacheDict.
-			if (idCacheDict.ContainsKey(this.contents.Count)) {
-				this.contents[this.contents.Count - 1].SetId(idCacheDict[this.contents.Count]);
+			if (idCacheDict.ContainsKey(contents.Count)) {
+				contents[contents.Count - 1].SetId(idCacheDict[contents.Count]);
 			}
 
 			this.ApplyDataToInspector();
@@ -35,42 +38,51 @@ public class GUIWindow : EditorWindow {
 
 	private void OnGUI () {
 
-		if (GUILayout.Button("add content:" + this.contents.Count)) {
+		if (GUILayout.Button("add content:" + contents.Count)) {
 			
-			var newContent = new ContentLine(Guid.NewGuid().ToString());
+			var newContentId = Guid.NewGuid().ToString();
+			var newContent = new ContentLine(newContentId);
 
-			Undo.RecordObject(this, "add");
-			this.contents.Add(newContent);
+			Undo.RecordObject(this, "Add Content id:" + newContentId);
+			contents.Add(newContent);
 
-			// store data to idCacheDict.
-			idCacheDict[this.contents.Count] = newContent.GetId();
+			/*
+				store data to idCacheDict.
+				listのindex特性を使って、contentsのindex countをキーに、その時セットされたid値をバリューに保存する。
+			*/
+			idCacheDict[contents.Count] = newContentId;
 		}
 
 		EditorGUILayout.Space();
 
-		for (var i = 0; i < this.contents.Count; i++) {
-			if (this.contents[i].IsDeleted()) continue;
+		for (var i = 0; i < contents.Count; i++) {
+			/*
+				論理削除されてる場合は無視
+			*/
+			if (contents[i].IsDeleted()) continue;
+
+			var contentId = contents[i].GetId();
 
 			EditorGUILayout.BeginHorizontal();
 			
-			if (GUILayout.Button("SetActive")) this.contents[i].SetActive();
+			if (GUILayout.Button("SetActive")) {
+				contents[i].SetActive();
+			}
 
-			if (GUILayout.Button("count up content[" + i + "]:" + this.contents[i].GetData() + " not effect:" + this.contents[i].GetUnchangeData() + " id:" + this.contents[i].GetId())) {
-				Undo.RecordObject(this, "update content index:" + i);
-				this.contents[i].CountUp();
+			if (GUILayout.Button("count up content[" + i + "]:" + contents[i].GetData() + " not effect:" + contents[i].GetUnchangeData() + " id:" + contentId)) {
+				Undo.RecordObject(this, "Update Content count, id:" + contentId);
+				contents[i].CountUp();
 			}
 
 			if (GUILayout.Button("delete " + i)) {
-				Undo.RecordObject(this, "delete:" + i);
-				this.contents[i].Delete();
+				Undo.RecordObject(this, "Delete Content id:" + contentId);
+				contents[i].Delete();
 			}
 			
 			EditorGUILayout.EndHorizontal();
 		}
 	}
 
-
-	[SerializeField] public List<ContentLine> contents;
 
 	/**
 		保存されているデータをcontentsに適応

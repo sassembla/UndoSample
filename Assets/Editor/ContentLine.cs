@@ -32,12 +32,12 @@ using UnityEditor;
 
 	public ContentLine () {
 		// initialize structure. all data will set by record or user interaction.
-		Debug.LogError("default constructor. called by Redo.");
+		Debug.Log("default constructor. called by Redo. id:" + id + "/ is empty.");
 	}
 
 	public ContentLine (string id) {
 		this.id = id;
-		Debug.LogError("ロードからのidとか色々をセット、っていう感じ。id:" + id);
+		Debug.Log("parameterized constructor. called by code. id:" + id);
 	}
 
 	public void Delete () {
@@ -53,12 +53,12 @@ using UnityEditor;
 	}
 
 	public void SetId (string id) {
-		Debug.LogError("setId");
+		Debug.Log("setId:" + id);
 		this.id = id;
 	}
 
 	public void SetActive () {
-		Debug.LogError("activate");
+		Debug.Log("activate:" + id);
 		ApplyDataToInspector();
 
 		Selection.activeObject = inspectObj;
