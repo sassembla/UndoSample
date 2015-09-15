@@ -32,6 +32,7 @@ using UnityEditor;
 
 	public ContentLine () {
 		// initialize structure. all data will set by record or user interaction.
+		Debug.LogError("default constructor. called by Redo.");
 	}
 
 	public ContentLine (string id) {
@@ -52,6 +53,7 @@ using UnityEditor;
 	}
 
 	public void SetId (string id) {
+		Debug.LogError("setId");
 		this.id = id;
 	}
 

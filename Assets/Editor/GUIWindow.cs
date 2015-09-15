@@ -11,9 +11,6 @@ public class GUIWindow : EditorWindow {
 		EditorWindow.GetWindow<GUIWindow>();
 	}
 
-	private Recorder record;
-	private int recordId;
-
 	private Dictionary<int, string> idCacheDict = new Dictionary<int, string>();
 	
 	private void OnEnable () {
@@ -22,73 +19,73 @@ public class GUIWindow : EditorWindow {
 		// handler for Undo/Redo
 		Undo.undoRedoPerformed += () => {
 			// restore content id from idCacheDict.
-			if (idCacheDict.ContainsKey(record.contents.Count)) {
-				record.contents[record.contents.Count - 1].SetId(idCacheDict[record.contents.Count]);
+			if (idCacheDict.ContainsKey(this.contents.Count)) {
+				this.contents[this.contents.Count - 1].SetId(idCacheDict[this.contents.Count]);
 			}
 
-			record.ApplyDataToInspector();
+			this.ApplyDataToInspector();
 
 			Repaint();
 		};
 
-		var savedData = "raw data";// 抽出した結果を保存しておく。それを引き出す。
+		var savedData = "raw data";// たとえばファイル、assetから保存データを抜き出す。
 
-		RestoreRecord();
+		this.ApplySavedData();
 	}
 
 	private void OnGUI () {
-		if (record == null) {
-			Debug.LogError("regenerate.");
-			var candidate = EditorUtility.InstanceIDToObject(recordId) as Recorder;
 
-			if (candidate == null) RestoreRecord();
-			else record = candidate;
-		}
-
-
-		if (GUILayout.Button("add content:" + record.contents.Count)) {
+		if (GUILayout.Button("add content:" + this.contents.Count)) {
 			
 			var newContent = new ContentLine(Guid.NewGuid().ToString());
 
-			Undo.RecordObject(record, "add");
-			record.contents.Add(newContent);
+			Undo.RecordObject(this, "add");
+			this.contents.Add(newContent);
 
 			// store data to idCacheDict.
-			idCacheDict[record.contents.Count] = newContent.GetId();
+			idCacheDict[this.contents.Count] = newContent.GetId();
 		}
 
 		EditorGUILayout.Space();
 
-		for (var i = 0; i < record.contents.Count; i++) {
-			if (record.contents[i].IsDeleted()) continue;
+		for (var i = 0; i < this.contents.Count; i++) {
+			if (this.contents[i].IsDeleted()) continue;
 
 			EditorGUILayout.BeginHorizontal();
 			
-			if (GUILayout.Button("SetActive")) record.contents[i].SetActive();
+			if (GUILayout.Button("SetActive")) this.contents[i].SetActive();
 
-			if (GUILayout.Button("count up content[" + i + "]:" + record.contents[i].GetData() + " not effect:" + record.contents[i].GetUnchangeData() + " id:" + record.contents[i].GetId())) {
-				Undo.RecordObject(record, "update content index:" + i);
-				record.contents[i].CountUp();
+			if (GUILayout.Button("count up content[" + i + "]:" + this.contents[i].GetData() + " not effect:" + this.contents[i].GetUnchangeData() + " id:" + this.contents[i].GetId())) {
+				Undo.RecordObject(this, "update content index:" + i);
+				this.contents[i].CountUp();
 			}
 
 			if (GUILayout.Button("delete " + i)) {
-				Undo.RecordObject(record, "delete:" + i);
-				record.contents[i].Delete();
+				Undo.RecordObject(this, "delete:" + i);
+				this.contents[i].Delete();
 			}
 			
 			EditorGUILayout.EndHorizontal();
 		}
 	}
 
-	private void RestoreRecord () {
-		if (record == null) {
-			record = ScriptableObject.CreateInstance("Recorder") as Recorder;
-			recordId = record.GetInstanceID();
-		}
 
-		/*
-			保存されているデータを読み出して使用する。
-		*/
-		record.ApplySavedData();
+	[SerializeField] public List<ContentLine> contents;
+
+	/**
+		保存されているデータをcontentsに適応
+		ここでは初期化だけを行っている。
+	*/
+	public void ApplySavedData () {
+		contents = new List<ContentLine>();
+		var newContent = new ContentLine(Guid.NewGuid().ToString());
+		contents.Add(newContent);
+	}
+
+	/**
+		Undo,Redoを元に、各オブジェクトのInspectorの情報を更新する
+	*/
+	public void ApplyDataToInspector () {
+		foreach (var content in contents) content.ApplyDataToInspector();
 	}
 }
