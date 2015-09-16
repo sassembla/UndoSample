@@ -13,19 +13,11 @@ public class GUIWindow : EditorWindow {
 
 	[SerializeField] public List<ContentLine> contents;
 
-	// cache dictionary for Undo/Redo generated object.
-	private Dictionary<int, string> idCacheDict = new Dictionary<int, string>();
-	
 	private void OnEnable () {
 		Debug.Log("onEnable");
 
 		// handler for Undo/Redo
 		Undo.undoRedoPerformed += () => {
-			// restore content id from idCacheDict.
-			if (idCacheDict.ContainsKey(contents.Count)) {
-				contents[contents.Count - 1].SetId(idCacheDict[contents.Count]);
-			}
-
 			this.ApplyDataToInspector();
 
 			Repaint();
@@ -45,12 +37,6 @@ public class GUIWindow : EditorWindow {
 
 			Undo.RecordObject(this, "Add Content id:" + newContentId);
 			contents.Add(newContent);
-
-			/*
-				store data to idCacheDict.
-				listのindex特性を使って、contentsのindex countをキーに、その時セットされたid値をバリューに保存する。
-			*/
-			idCacheDict[contents.Count] = newContentId;
 		}
 
 		EditorGUILayout.Space();

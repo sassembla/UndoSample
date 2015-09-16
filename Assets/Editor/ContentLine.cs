@@ -83,7 +83,10 @@ using UnityEditor;
 
 
 	public void ApplyDataToInspector () {
-		if (inspectObj == null) inspectObj = ScriptableObject.CreateInstance("ContentInspector") as ContentInspector;
+		if (inspectObj == null) {
+			Debug.LogError("inspectObj new.");
+			inspectObj = ScriptableObject.CreateInstance("ContentInspector") as ContentInspector;
+		}
 
 		inspectObj.id = id;
 		inspectObj.data = data;

@@ -6,5 +6,4 @@ using UnityEngine;
 public class ContentInspector : ScriptableObject {
 	public string id;
 	public int data;
-
 }
